@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign Up</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<h2>회원가입</h2>
+
+<!-- 메시지 출력 -->
+<p id="message" style="color:red;" th:text="${message}"></p>
+
+<form id="signUpForm" action="/signIn" method="post">
+    <div>
+        <label>ID</label>
+        <input type="text" name="id" id="id" required>
+        <button type="button" onclick="checkId()">중복체크</button>
+        <span id="idCheckMsg" style="color:blue;"></span>
+    </div>
+
+    <div>
+        <label>Password</label>
+        <input type="password" name="password" required>
+    </div>
+
+    <div>
+        <label>Name</label>
+        <input type="text" name="name" required>
+    </div>
+
+    <div>
+        <label>Email</label>
+        <input type="email" name="email" required>
+    </div>
+
+    <button type="submit" id="submitBtn" disabled>회원가입</button>
+</form>
+
+<script>
+    let idAvailable = false;
+    let checkedId = ""; // 마지막으로 체크한 ID 저장
+
+    function checkId() {
+        const id = document.getElementById('id').value;
+        if (!id) {
+            alert("ID를 입력해주세요.");
+            return;
+        }
+
+        axios.get('/checkId', { params: { id: id } })
+            .then(response => {
+                if (response.data === 'success') {
+                    document.getElementById('idCheckMsg').innerText = "사용 가능한 ID입니다.";
+                    document.getElementById('idCheckMsg').style.color = "green";
+                    idAvailable = true;
+                    checkedId = id; // 체크한 ID 저장
+                    document.getElementById('submitBtn').disabled = false;
+                } else {
+                    document.getElementById('idCheckMsg').innerText = "이미 사용중인 ID입니다.";
+                    document.getElementById('idCheckMsg').style.color = "red";
+                    idAvailable = false;
+                    checkedId = ""; // 체크 무효화
+                    document.getElementById('submitBtn').disabled = true;
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                document.getElementById('idCheckMsg').innerText = "ID 확인 중 오류 발생";
+                document.getElementById('idCheckMsg').style.color = "red";
+                idAvailable = false;
+                checkedId = "";
+                document.getElementById('submitBtn').disabled = true;
+            });
+    }
+
+    // 폼 제출 전에 ID 체크 여부 및 변경 여부 확인
+    document.getElementById('signUpForm').addEventListener('submit', function(e) {
+        const currentId = document.getElementById('id').value;
+        if (!idAvailable || currentId !== checkedId) {
+            e.preventDefault();
+            alert("ID 중복 체크를 완료하고, 체크한 ID로만 회원가입 가능합니다.");
+            document.getElementById('submitBtn').disabled = true;
+        }
+    });
+</script>
+
+</body>
+</html>

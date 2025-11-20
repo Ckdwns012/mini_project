@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Page</title>
+</head>
+<body>
+
+<h2>Login Page</h2>
+
+<!-- 메시지가 있을 경우 표시 -->
+<p th:if="${message != null}" th:text="${message}" style="color:red;"></p>
+
+<!-- loginDTO 바인딩 -->
+<form th:action="@{/login}" th:object="${loginDTO}" method="post">
+
+  <label for="id">ID:</label>
+  <input type="text" id="id" th:field="*{id}">
+  <br/><br/>
+
+  <label for="password">Password:</label>
+  <input type="password" id="password" th:field="*{password}">
+  <br/><br/>
+
+  <button type="submit">Login</button>
+</form>
+
+<br/>
+
+<!-- 회원가입 페이지로 이동 버튼 -->
+<a th:href="@{/signUp}">
+  <button type="button">Sign Up</button>
+</a>
+
+</body>
+</html>
