@@ -1,0 +1,70 @@
+<!-- src/main/resources/templates/aiChat.html -->
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 실시간 채팅</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        #chatBox { width: 500px; height: 400px; border: 1px solid #ccc; padding: 10px; overflow-y: scroll; }
+        .user { color: blue; }
+        .ai { color: green; }
+        .loading { color: gray; font-style: italic; } /* 로딩 스타일 추가 */
+    </style>
+</head>
+<body>
+<h2>AI 실시간 채팅</h2>
+<div id="chatBox"></div>
+<input type="text" id="userInput" placeholder="메시지 입력">
+<button id="sendBtn">전송</button>
+
+<script>
+    const chatBox = document.getElementById('chatBox');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    sendBtn.addEventListener('click', async () => {
+        const question = userInput.value.trim();
+        if(!question) return;
+
+        // 1. 사용자 메시지 표시
+        chatBox.innerHTML += `<div class="user">나: ${question}</div>`;
+        userInput.value = '';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // 2. 로딩 메시지 표시
+        const loadingDiv = document.createElement('div');
+        loadingDiv.classList.add('ai', 'loading');
+        loadingDiv.textContent = 'AI: 답변 생성 중...';
+        chatBox.appendChild(loadingDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            // 3. API 요청 (await 사용)
+            // URL을 새로운 API 엔드포인트인 '/lm/api/ask'로 변경합니다.
+            const res = await fetch(`/lm/api/ask?question=${encodeURIComponent(question)}`, { method: 'POST' });
+
+            if (!res.ok) {
+                // HTTP 오류 발생 시 (예: 500 Internal Server Error)
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+
+            const answer = await res.text();
+
+            // 4. 로딩 메시지 제거 및 실제 답변 표시
+            chatBox.removeChild(loadingDiv);
+            chatBox.innerHTML += `<div class="ai">AI: ${answer}</div>`;
+
+        } catch (error) {
+            // 5. 오류 발생 시 처리
+            chatBox.removeChild(loadingDiv);
+            // 스프링 부트 콘솔의 상세 오류를 확인해야 합니다.
+            chatBox.innerHTML += `<div class="ai" style="color: red;">AI 오류: ${error.message}. 서버 콘솔을 확인하세요.</div>`;
+            console.error("Fetch error:", error);
+        }
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+</script>
+</body>
+</html>
