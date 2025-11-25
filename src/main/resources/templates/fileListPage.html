@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>파일 목록</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+        h2 {
+            margin-bottom: 15px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #fff;
+            padding: 8px 12px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #a71d2a;
+        }
+    </style>
+</head>
+<body>
+<h2>업로드된 파일 목록</h2>
+<ul id="fileList">
+    <th:block th:each="file : ${files}">
+        <li>
+            <!-- 파일명 클릭 시 다운로드 -->
+            <a th:href="@{/files/download(filename=${file})}" th:text="${file}" download></a>
+            <!-- onclick 핸들러 수정: deleteFile 함수를 직접 호출하도록 변경 -->
+            <button type="button" th:onclick="deleteFile([[${file}]])">삭제</button>
+        </li>
+    </th:block>
+</ul>
+
+
+<script>
+    // 함수 이름 수정 (이전 코드의 deleteFileFromButton에서 deleteFile로 변경됨)
+    async function deleteFile(filename) {
+        if (!confirm(filename + "을(를) 정말 삭제하시겠습니까?")) return;
+
+        try {
+            // 서버의 엔드포인트: /files/delete?filename=...
+            const response = await fetch(`/files/delete?filename=${encodeURIComponent(filename)}`);
+            const result = await response.text();
+            alert(result);
+            // 페이지 새로고침
+            window.location.reload();
+        } catch (err) {
+            alert("삭제 중 오류 발생: " + err.message);
+        }
+    }
+</script>
+
+</body>
+</html>

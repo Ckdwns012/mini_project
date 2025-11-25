@@ -8,12 +8,20 @@
 <body>
 <h1>로그인 성공!</h1>
 <button onclick="goToChat()">AI 채팅 시작</button>
+<button onclick="goToUpload()">파일 업로드</button>
+<button onclick="goToFiles()">파일 보기</button>
 
 <script>
     function goToChat() {
         // AI 채팅 페이지로 이동 (aiPageController의 경로로 이동)
         // URL은 http://localhost:9090/lm/page/aiChat 이 됩니다.
         window.location.href = '/lm/page/aiChat';
+    }
+    function goToUpload() {
+        window.location.href = '/uploadPage';
+    }
+    function goToFiles() {
+        window.location.href = '/files';
     }
 </script>
 

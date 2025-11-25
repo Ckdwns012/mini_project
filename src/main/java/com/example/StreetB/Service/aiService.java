@@ -21,7 +21,7 @@ import java.util.List;
 public class aiService {
 
     private final String LM_STUDIO_BASE_URL = "http://localhost:1234/v1";
-    private final String MODEL_NAME = "qwen/qwen3-vl-4b";
+    private final String MODEL_NAME = "gemma-3-270m-it-mlx";
     private final WebClient webClient;
 
     public aiService(WebClient.Builder webClientBuilder) {
@@ -44,7 +44,7 @@ public class aiService {
 
         // 1. 요청 메시지 구성 (시스템 및 사용자 메시지)
         List<Message> messages = new ArrayList<>();
-        messages.add(new Message("system", "Always answer in rhymes. Today is Thursday"));
+//      messages.add(new Message("system", "if you can't understand, tell me you don't know, all answer are korean"));
         messages.add(new Message("user", userPrompt));
 
         // 2. ChatRequest 객체 생성 (DTO의 기본값 사용)
