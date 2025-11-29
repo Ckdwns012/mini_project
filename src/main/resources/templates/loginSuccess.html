@@ -1,28 +1,199 @@
-<!-- src/main/resources/templates/loginSuccess.html -->
+<!-- src/main/resources/templates/loginSuccess.html (UI/UX 개선 버전) -->
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org"> <!-- Thymeleaf 선언 -->
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>로그인 성공</title>
+    <title>AI 채팅 및 파일 관리 통합 페이지</title>
+    <style>
+        /* 기본 레이아웃 및 리셋 */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; background-color: #f4f4f4; }
+        .container { display: flex; width: 100%; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .pane { flex: 1; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; background-color: #fff; }
+        .left-pane { border-right: 1px solid #ddd; }
+
+        /* AI 채팅 영역 */
+        #chatBox { flex-grow: 1; border: 1px solid #ccc; border-radius: 8px; padding: 15px; overflow-y: auto; margin-bottom: 10px; background-color: #fafafa; }
+        .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 15px; max-width: 80%; }
+        .user { background-color: #007bff; color: white; align-self: flex-end; margin-left: auto; }
+        .ai { background-color: #e9ecef; color: #333; margin-right: auto; }
+        .loading { font-style: italic; color: gray; }
+
+        .chat-input-area { display: flex; gap: 10px; }
+        .chat-input-area input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+        .chat-input-area button { padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; }
+
+        /* 파일 관리 영역 */
+        .file-list-container { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .file-item a { text-decoration: none; color: #0056b3; }
+        .delete-btn { background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+
+        .upload-button-area { text-align: right; }
+        #addFileBtn { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }
+
+        /* 모달 (팝업) 스타일 */
+        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fff; margin: 15% auto; padding: 30px; border: 1px solid #888; width: 400px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover, .close:focus { color: #333; text-decoration: none; }
+        #uploadForm button { width: 100%; padding: 10px; margin-top: 15px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
 </head>
 <body>
-<h1>로그인 성공!</h1>
-<button onclick="goToChat()">AI 채팅 시작</button>
-<button onclick="goToUpload()">파일 업로드</button>
-<button onclick="goToFiles()">파일 보기</button>
+
+<div class="container">
+    <!-- 왼쪽 절반: AI 채팅 -->
+    <div class="pane left-pane">
+        <h2>AI 채팅 (RAG)</h2>
+        <div id="chatBox"></div>
+        <div class="chat-input-area">
+            <input type="text" id="userInput" placeholder="메시지 입력">
+            <button id="sendBtn">전송</button>
+        </div>
+    </div>
+
+    <!-- 오른쪽 절반: 파일 목록 및 업로드 버튼 -->
+    <div class="pane right-pane">
+        <h2>파일 관리</h2>
+        <div class="file-list-container">
+            <h3>업로드된 파일</h3>
+            <ul id="fileList"></ul>
+        </div>
+        <div class="upload-button-area">
+            <button id="addFileBtn" onclick="openUploadModal()">파일 추가하기</button>
+        </div>
+    </div>
+</div>
+
+<!-- 파일 업로드 모달 (팝업) -->
+<div id="uploadModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeUploadModal()">&times;</span>
+        <h3>파일 업로드</h3>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" id="fileInput" name="file" required />
+            <button type="submit">업로드 시작</button>
+        </form>
+    </div>
+</div>
 
 <script>
-    function goToChat() {
-        // AI 채팅 페이지로 이동 (aiPageController의 경로로 이동)
-        // URL은 http://localhost:9090/lm/page/aiChat 이 됩니다.
-        window.location.href = '/lm/page/aiChat';
+    // --- 왼쪽 Pane (AI Chat) JavaScript ---
+    const chatBox = document.getElementById('chatBox');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+        // 엔터 키 입력 감지 이벤트 리스너 추가
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendBtn.click(); // Enter 키 입력 시 전송 버튼 클릭 이벤트 실행
+        }
+    });
+
+    sendBtn.addEventListener('click', async () => {
+        const question = userInput.value.trim();
+        if(!question) return;
+
+        // UI/UX 개선: 말풍선 스타일 적용
+        chatBox.innerHTML += `<div class="message user">나: ${question}</div>`;
+        userInput.value = '';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const loadingDiv = document.createElement('div');
+        loadingDiv.classList.add('message', 'ai', 'loading');
+        loadingDiv.textContent = 'AI: 답변 생성 중...';
+        chatBox.appendChild(loadingDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            const res = await fetch(`/lm/api/ask?question=${encodeURIComponent(question)}`, { method: 'POST' });
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+            const answer = await res.text();
+            chatBox.removeChild(loadingDiv);
+            chatBox.innerHTML += `<div class="message ai">AI: ${answer}</div>`;
+
+        } catch (error) {
+            chatBox.removeChild(loadingDiv);
+            chatBox.innerHTML += `<div class="message ai" style="color: red;">AI 오류: ${error.message}. 서버 콘솔을 확인하세요.</div>`;
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+
+    // --- 오른쪽 Pane (File Management) JavaScript ---
+    const fileList = document.getElementById('fileList');
+    const uploadForm = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
+    const uploadModal = document.getElementById('uploadModal');
+
+    function openUploadModal() { uploadModal.style.display = 'block'; }
+    function closeUploadModal() { uploadModal.style.display = 'none'; fileInput.value = ''; }
+
+    // 1. 파일 목록 불러오기 및 렌더링
+    async function loadFiles() {
+        try {
+            const response = await fetch('/api/files');
+            if (!response.ok) throw new Error('파일 목록을 불러오지 못했습니다.');
+            const files = await response.json();
+            renderFiles(files);
+        } catch (error) {
+            console.error(error);
+        }
     }
-    function goToUpload() {
-        window.location.href = '/uploadPage';
+
+    function renderFiles(files) {
+        fileList.innerHTML = '';
+        files.forEach(file => {
+            const li = document.createElement('li');
+            li.classList.add('file-item');
+            li.innerHTML = `
+                <a href="/files/download?filename=${encodeURIComponent(file)}" download>${file}</a>
+                <button class="delete-btn" onclick="deleteFile('${file}')">삭제</button>
+            `;
+            fileList.appendChild(li);
+        });
     }
-    function goToFiles() {
-        window.location.href = '/files';
+
+    // 2. 파일 업로드 처리
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (fileInput.files.length === 0) return;
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]); // 첫 번째 파일만 처리
+
+        try {
+            const response = await fetch('/upload', { method: 'POST', body: formData });
+            const result = await response.json();
+
+            alert(result.message);
+            if (result.status === "success") {
+                closeUploadModal();
+                loadFiles(); // 성공 시 목록 새로고침 (RAG에 바로 반영)
+            }
+        } catch (err) {
+            alert("업로드 중 오류 발생: " + err.message);
+        }
+    });
+
+    // 3. 파일 삭제 처리
+    async function deleteFile(filename) {
+        if (!confirm(`'${filename}'을(를) 정말 삭제하시겠습니까?`)) return;
+
+        try {
+            const response = await fetch(`/files/delete?filename=${encodeURIComponent(filename)}`);
+            const result = await response.text();
+            alert(result);
+            if (result.startsWith("삭제 성공")) {
+                loadFiles(); // 성공 시 목록 새로고침 (RAG에 바로 반영)
+            }
+        } catch (err) {
+            alert("삭제 중 오류 발생: " + err.message);
+        }
     }
+
+    // 페이지 로드 시 파일 목록 불러오기
+    loadFiles();
 </script>
 
 </body>

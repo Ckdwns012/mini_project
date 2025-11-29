@@ -31,6 +31,7 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 
 	//ai요청
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
@@ -43,6 +44,14 @@ dependencies {
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+	// PDF 파일 텍스트 추출 라이브러리 추가
+	implementation 'org.apache.pdfbox:pdfbox:2.0.29' // 최신 안정 버전 확인 필요
+
+	// 검색기능 향상을 위한 라이브러리 추가
+	implementation 'dev.langchain4j:langchain4j:0.31.0'
+	implementation 'dev.langchain4j:langchain4j-open-ai:0.31.0' // LM Studio API 호환용
+	implementation 'dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:0.31.0' // 임베딩 모델
 }
 
 tasks.named('test') {
