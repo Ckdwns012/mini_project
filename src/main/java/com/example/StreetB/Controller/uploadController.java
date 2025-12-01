@@ -1,5 +1,7 @@
 package com.example.StreetB.Controller;
 
+import com.example.StreetB.Service.aiService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -31,6 +33,8 @@ class UploadResponse {
 
 @Controller
 public class uploadController {
+    @Autowired
+    private aiService aiService;
     private final String UPLOAD_DIR = "/Users/ichangjun/Documents/StreetB/uploads";
     private final String FILE_DIR = "/Users/ichangjun/Documents/StreetB/uploads";
 
@@ -54,7 +58,7 @@ public class uploadController {
             String filename = StringUtils.cleanPath(file.getOriginalFilename());
             File dest = Paths.get(UPLOAD_DIR, filename).toFile();
             file.transferTo(dest);
-
+            aiService.initializeDocumentStore();
             return new UploadResponse("success", "파일 업로드 성공: " + filename);
         } catch (IOException e) {
             e.printStackTrace();
@@ -106,6 +110,7 @@ public class uploadController {
         File file = new File(FILE_DIR, filename);
         if (file.exists() && file.isFile()) {
             if (file.delete()) {
+                aiService.initializeDocumentStore();
                 return "삭제 성공: " + filename;
             } else {
                 return "삭제 실패: " + filename;

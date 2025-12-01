@@ -22,6 +22,17 @@
         .chat-input-area input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
         .chat-input-area button { padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; }
 
+        .ai-response {
+        /* 이 설정이 핵심입니다. 공백과 줄바꿈을 그대로 화면에 표시해 줍니다. */
+        white-space: pre-wrap;
+
+        /* 채팅창의 크기와 스크롤 설정을 위한 기본 스타일 (선택사항) */
+        height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 10px;}
+
         /* 파일 관리 영역 */
         .file-list-container { flex-grow: 1; overflow-y: auto; margin-bottom: 15px; }
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
@@ -41,16 +52,16 @@
 </head>
 <body>
 
-<div class="container">
-    <!-- 왼쪽 절반: AI 채팅 -->
-    <div class="pane left-pane">
-        <h2>AI 채팅 (RAG)</h2>
-        <div id="chatBox"></div>
-        <div class="chat-input-area">
-            <input type="text" id="userInput" placeholder="메시지 입력">
-            <button id="sendBtn">전송</button>
-        </div>
+<!-- 왼쪽 절반: AI 채팅 -->
+<div class="pane left-pane">
+    <h2>AI 채팅 (RAG)</h2>
+    <!-- 여기에 ai-response 클래스 추가 -->
+    <div id="chatBox" class="ai-response"></div>
+    <div class="chat-input-area">
+        <input type="text" id="userInput" placeholder="메시지 입력">
+        <button id="sendBtn">전송</button>
     </div>
+</div>
 
     <!-- 오른쪽 절반: 파일 목록 및 업로드 버튼 -->
     <div class="pane right-pane">

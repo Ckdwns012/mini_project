@@ -55,6 +55,7 @@ public class aiService {
     @PostConstruct
     public void initializeDocumentStore() {
         System.out.println("문서 저장소를 초기화 중입니다...");
+        vectorStore.clearChunk();
         readAndChunkUploadedFiles();
         System.out.println("총 " + vectorStore.getSize() + "개의 문서 청크가 로드되었습니다.");
     }
@@ -69,16 +70,19 @@ public class aiService {
             // 검색된 청크들을 하나의 컨텍스트 문자열로 결합
             StringBuilder contextBuilder = new StringBuilder();
             for (DocumentChunk chunk : relevantChunks) {
-                contextBuilder.append("---문서 내용---\n").append(chunk.getContent()).append("\n\n");
+                contextBuilder.append("---문서 내용---\n 법률: ").append(chunk.getFileName()).append("\n").append(chunk.getContent()).append("\n\n");
             }
             String relevantContext = contextBuilder.toString();
-            // 관련 문서가 있을때의 시스템 메시지
+            // 관련 문서가 있을때의 시스템 메시지 이용
             messages.add(new Message("system", "너는 법령을 구조화해서 요약하는 비서다.\n" +
                     "항목별로 정돈된 한국어 문장으로만 답변하라.\n" +
-                    "문서의 원문 문장을 그대로 다시 쓰지 마라.\n\n" + relevantContext));
+                    "답변을 참고한 법률과 몇 조에 따른 답변인지 근거를 제시하라.\n" +
+                    "시행령, 시행규칙, 법률 모두 법률로 취급한다 .\n" +
+                    "근거를 제시할때는 [근거: 법률 몇조] 형식으로 답변 마지막에 제시한다.\n" +
+                    "문서의 원문 문장을 그대로 다시 쓰지 마라.\n" + relevantContext));
         } else {
             // 관련 문서를 찾지 못한 경우 일반적인 시스템 메시지 사용
-            messages.add(new Message("system", "당신은 유능한 한국어 AI 어시스턴트입니다. 질문에 간결하게 답변해주세요."));
+            messages.add(new Message("system", "학습된 법률로는 관련된 정보를 찾을 수 없습니다. 정확한 단어를 사용하여 질의 해주시기 바랍니다. 만 송출해"));
         }
 
         messages.add(new Message("user", userPrompt));
@@ -106,7 +110,9 @@ public class aiService {
                 .bodyToMono(ChatResponse.class)
                 .map(response -> {
                     if (response != null && !response.getChoices().isEmpty()) {
-                        return response.getChoices().get(0).getMessage().getContent();
+                        String rawContent = response.getChoices().get(0).getMessage().getContent();
+                        // 여기서 텍스트를 가공합니다.
+                        return rawContent;
                     } else {
                         return "Failed to get AI response or empty response.";
                     }
@@ -116,6 +122,35 @@ public class aiService {
                     return Mono.just("Service temporarily unavailable due to an error: " + e.getMessage());
                 });
     }
+
+    /*
+     * AI 응답 문자열을 원하는 형식으로 가공하는 함수
+     * - 모든 '*' 문자를 제거합니다.
+     * - '숫자.' 앞에 줄바꿈을 추가합니다.
+     * @param rawResponse 원본 API 응답 문자열
+     * @return 가공된 문자열
+     */
+//    private String formatText(String rawResponse) {
+//        if (rawResponse == null) {
+//            return "";
+//        }
+//
+//        // 1. 모든 '*' 문자를 제거합니다.
+//        String noStars = rawResponse.replace("*", "");
+//
+//        // 2. '숫자.' 패턴 앞에 줄바꿈을 삽입합니다. (정규 표현식 사용)
+//        //    (\\s)는 앞선 공백을 캡처 그룹 1로, (\\d+\\.)는 숫자+. 패턴을 캡처 그룹 2로 잡습니다.
+//        //    replaceAll("\n$2")는 캡처된 공백을 무시하고 숫자+. 앞에 \n을 삽입합니다.
+//        Pattern pattern = Pattern.compile("(\\s)(\\d+\\.)");
+//        Matcher matcher = pattern.matcher(noStars);
+//
+//        String formattedText = matcher.replaceAll("\n$2");
+//
+//        // 3. (선택사항) 문자열 시작 부분의 "AI: " 접두사나 불필요한 시작 공백을 제거합니다.
+//        formattedText = formattedText.trim().replaceFirst("^AI: ", "");
+//
+//        return formattedText;
+//    }
 
     /**
      * 업로드된 파일의 내용을 읽고 작은 청크로 분할하여 인메모리 저장소에 저장합니다.

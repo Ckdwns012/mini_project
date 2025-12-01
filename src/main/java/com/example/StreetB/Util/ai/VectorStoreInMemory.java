@@ -17,6 +17,10 @@ public class VectorStoreInMemory {
         return store.size();
     }
 
+    public void clearChunk(){
+        this.store.clear();
+    }
+
     /**
      * 사용자 쿼리와 가장 관련성이 높은 청크를 검색합니다.
      * 실제 벡터 검색이 아닌, 단순 키워드 유사도 점수를 매기는 방식으로 구현했습니다.
