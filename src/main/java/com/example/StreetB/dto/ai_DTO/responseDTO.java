@@ -1,4 +1,4 @@
-package com.example.StreetB.Util.ai;
+package com.example.StreetB.dto.ai_DTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,8 +12,8 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatResponse {
+public class responseDTO {
     private String id;
-    private List<Choice> choices;
+    private List<choiceDTO> choices;
     // usage 등 다른 필드는 생략 가능
 }

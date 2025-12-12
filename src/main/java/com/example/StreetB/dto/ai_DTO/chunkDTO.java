@@ -1,11 +1,11 @@
-package com.example.StreetB.Util.ai;
+package com.example.StreetB.dto.ai_DTO;
 
-public class DocumentChunk {
+public class chunkDTO {
     private final String fileName;
     private final int chunkIndex;
     private final String content;
 
-    public DocumentChunk(String fileName, int chunkIndex, String content) {
+    public chunkDTO(String fileName, int chunkIndex, String content) {
         this.fileName = fileName;
         this.chunkIndex = chunkIndex;
         this.content = content;

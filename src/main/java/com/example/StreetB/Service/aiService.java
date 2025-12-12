@@ -1,6 +1,11 @@
 package com.example.StreetB.Service;
 
-import com.example.StreetB.Util.ai.*;
+import com.example.StreetB.Config.DocumentChunker;
+import com.example.StreetB.Config.ChatRequest;
+import com.example.StreetB.Config.VectorStoreInMemory;
+import com.example.StreetB.dto.ai_DTO.chunkDTO;
+import com.example.StreetB.dto.ai_DTO.messageDTO;
+import com.example.StreetB.dto.ai_DTO.responseDTO;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
@@ -23,19 +28,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+
 @Service("aiService")
 public class aiService {
-
     private final String LM_STUDIO_BASE_URL = "http://localhost:1234/v1";
     private final String MODEL_NAME = "qwen/qwen3-vl-4b";
     private final String UPLOAD_DIR = "/Users/ichangjun/Documents/StreetB/uploads";
     private final WebClient webClient;
-    private static final int CHUNK_SIZE = 1000; // 청크 크기 (예: 1000자)
+    // private static final int CHUNK_SIZE = 1000; // DocumentChunker로 이동
 
+    // DocumentChunker를 주입받기 위한 final 필드 선언
+    private final DocumentChunker documentChunker;
     // 검색 강화를 위해 인메모리 벡터 저장소를 사용합니다.
-    private final VectorStoreInMemory vectorStore = new VectorStoreInMemory();
+    private final VectorStoreInMemory vectorStore;
 
-    public aiService(WebClient.Builder webClientBuilder) {
+    // 생성자를 통해 모든 의존성을 주입받습니다.
+    public aiService(WebClient.Builder webClientBuilder, DocumentChunker documentChunker, VectorStoreInMemory vectorStore) {
+        this.documentChunker = documentChunker;
+        this.vectorStore = vectorStore; // 이제 스프링이 관리하는 빈을 사용합니다.
+
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                 .responseTimeout(Duration.ofMinutes(3))
@@ -49,9 +60,7 @@ public class aiService {
                 .build();
     }
 
-    /**
-     * 애플리케이션 시작 시 업로드 디렉토리의 파일을 로드하고 청킹합니다.
-     */
+    // 애플리케이션 시작 시 업로드 디렉토리의 파일을 로드하고 청킹합니다.
     @PostConstruct
     public void initializeDocumentStore() {
         System.out.println("문서 저장소를 초기화 중입니다...");
@@ -61,31 +70,31 @@ public class aiService {
     }
 
     public Mono<String> askModel(String userPrompt) {
-        List<Message> messages = new ArrayList<>();
+        List<messageDTO> messages = new ArrayList<>();
 
         // 개선된 로직: 사용자 프롬프트와 가장 유사한 관련 청크를 검색합니다.
-        List<DocumentChunk> relevantChunks = vectorStore.retrieveRelevantChunks(userPrompt, 3); // 상위 3개 청크 가져오기
+        List<chunkDTO> relevantChunks = vectorStore.retrieveRelevantChunks(userPrompt, 3); // 상위 3개 청크 가져오기
 
         if (!relevantChunks.isEmpty()) {
             // 검색된 청크들을 하나의 컨텍스트 문자열로 결합
             StringBuilder contextBuilder = new StringBuilder();
-            for (DocumentChunk chunk : relevantChunks) {
+            for (chunkDTO chunk : relevantChunks) {
                 contextBuilder.append("---문서 내용---\n 법률: ").append(chunk.getFileName()).append("\n").append(chunk.getContent()).append("\n\n");
             }
             String relevantContext = contextBuilder.toString();
             // 관련 문서가 있을때의 시스템 메시지 이용
-            messages.add(new Message("system", "너는 법령을 구조화해서 요약하는 비서다.\n" +
+            messages.add(new messageDTO("system", "너는 법령을 구조화해서 요약하는 비서다.\n" +
                     "항목별로 정돈된 한국어 문장으로만 답변하라.\n" +
                     "답변을 참고한 법률과 몇 조에 따른 답변인지 근거를 제시하라.\n" +
                     "시행령, 시행규칙, 법률 모두 법률로 취급한다 .\n" +
-                    "근거를 제시할때는 [근거: 법률 몇조] 형식으로 답변 마지막에 제시한다.\n" +
+                    "근거를 제시할때는 [근거: 법률 몇조] 형식으로 모든답변의 맨 마지막에 한줄을 띄어 제시한다.\n" +
                     "문서의 원문 문장을 그대로 다시 쓰지 마라.\n" + relevantContext));
         } else {
             // 관련 문서를 찾지 못한 경우 일반적인 시스템 메시지 사용
-            messages.add(new Message("system", "학습된 법률로는 관련된 정보를 찾을 수 없습니다. 정확한 단어를 사용하여 질의 해주시기 바랍니다. 만 송출해"));
+            messages.add(new messageDTO("system", "학습된 법률로는 관련된 정보를 찾을 수 없습니다. 정확한 단어를 사용하여 질의 해주시기 바랍니다. 만 송출해"));
         }
 
-        messages.add(new Message("user", userPrompt));
+        messages.add(new messageDTO("user", userPrompt));
 
         ChatRequest requestBody = new ChatRequest(MODEL_NAME, messages);
 
@@ -107,11 +116,11 @@ public class aiService {
                                 Mono.error(new RuntimeException("API Error: " + response.statusCode() + " - " + body))
                         )
                 )
-                .bodyToMono(ChatResponse.class)
+                .bodyToMono(responseDTO.class)
                 .map(response -> {
-                    if (response != null && !response.getChoices().isEmpty()) {
+                    // getChoice()의 반환 값이 null인지 먼저 확인합니다.
+                    if (response != null && response.getChoices() != null && !response.getChoices().isEmpty()) {
                         String rawContent = response.getChoices().get(0).getMessage().getContent();
-                        // 여기서 텍스트를 가공합니다.
                         return rawContent;
                     } else {
                         return "Failed to get AI response or empty response.";
@@ -123,38 +132,7 @@ public class aiService {
                 });
     }
 
-    /*
-     * AI 응답 문자열을 원하는 형식으로 가공하는 함수
-     * - 모든 '*' 문자를 제거합니다.
-     * - '숫자.' 앞에 줄바꿈을 추가합니다.
-     * @param rawResponse 원본 API 응답 문자열
-     * @return 가공된 문자열
-     */
-//    private String formatText(String rawResponse) {
-//        if (rawResponse == null) {
-//            return "";
-//        }
-//
-//        // 1. 모든 '*' 문자를 제거합니다.
-//        String noStars = rawResponse.replace("*", "");
-//
-//        // 2. '숫자.' 패턴 앞에 줄바꿈을 삽입합니다. (정규 표현식 사용)
-//        //    (\\s)는 앞선 공백을 캡처 그룹 1로, (\\d+\\.)는 숫자+. 패턴을 캡처 그룹 2로 잡습니다.
-//        //    replaceAll("\n$2")는 캡처된 공백을 무시하고 숫자+. 앞에 \n을 삽입합니다.
-//        Pattern pattern = Pattern.compile("(\\s)(\\d+\\.)");
-//        Matcher matcher = pattern.matcher(noStars);
-//
-//        String formattedText = matcher.replaceAll("\n$2");
-//
-//        // 3. (선택사항) 문자열 시작 부분의 "AI: " 접두사나 불필요한 시작 공백을 제거합니다.
-//        formattedText = formattedText.trim().replaceFirst("^AI: ", "");
-//
-//        return formattedText;
-//    }
-
-    /**
-     * 업로드된 파일의 내용을 읽고 작은 청크로 분할하여 인메모리 저장소에 저장합니다.
-     */
+    // 업로드된 파일의 내용을 읽고 작은 청크로 분할하여 인메모리 저장소에 저장합니다.
     private void readAndChunkUploadedFiles() {
         Path uploadPath = Paths.get(UPLOAD_DIR);
         if (!Files.exists(uploadPath)) {
@@ -175,32 +153,23 @@ public class aiService {
                     }
 
                     if (!content.isEmpty()) {
-                        // 텍스트를 청크로 분할하고 저장소에 추가
-                        List<String> chunks = chunkText(content, CHUNK_SIZE);
+                        // DocumentChunker의 조항 단위 분할 로직 사용 (매개변수 없음)
+                        List<String> chunks = documentChunker.chunkText(content);
                         for (int i = 0; i < chunks.size(); i++) {
-                            vectorStore.addChunk(new DocumentChunk(fileName, i, chunks.get(i)));
+                            // vectorStore.addChunk()는 이제 예외를 던지지 않습니다.
+                            vectorStore.addChunk(new chunkDTO(fileName, i, chunks.get(i)));
                         }
                     }
 
                 } catch (IOException e) {
                     e.printStackTrace();
+                    System.err.println("Error processing file: " + fileName);
                 }
             });
         } catch (IOException e) {
             e.printStackTrace();
+            System.err.println("Error listing files in upload directory.");
         }
-    }
-
-    /**
-     * 텍스트를 고정된 크기의 청크로 분할하는 단순 헬퍼 함수
-     */
-    private List<String> chunkText(String text, int size) {
-        List<String> chunks = new ArrayList<>();
-        int length = text.length();
-        for (int i = 0; i < length; i += size) {
-            chunks.add(text.substring(i, Math.min(length, i + size)));
-        }
-        return chunks;
     }
 
     private String extractTextFromPdf(File file) throws IOException {

@@ -1,4 +1,4 @@
-package com.example.StreetB.Util.ai;
+package com.example.StreetB.dto.ai_DTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Message {
+public class messageDTO {
     private String role;
     private String content;
 }

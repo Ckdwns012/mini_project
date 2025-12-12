@@ -1,16 +1,16 @@
-package com.example.StreetB.Util.ai;
+package com.example.StreetB.dto.ai_DTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-// 응답(Response) DTO - Choice 내부 구조
+// 응답(Response) DTO -  내부 구조
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Choice {
-    private Message message;
+public class choiceDTO {
+    private messageDTO message;
     private String finish_reason;
 }
