@@ -33,7 +33,7 @@ public class loginController {
             cookie.setPath("/");
             response.addCookie(cookie);
             model.addAttribute("message","sign in success");
-            return "loginSuccess";
+            return "redirect:/aiChatPage";
         }else{
             model.addAttribute("message","login fail");
             return "loginPage";
@@ -47,7 +47,7 @@ public class loginController {
     @RequestMapping("signIn")
     public String signIn(@ModelAttribute loginDTO loginDTO, Model model, HttpServletResponse response){
 
-        String token = loginService.login(loginDTO);
+        String token = loginService.signIn(loginDTO);
 
         if (token != null) {
             Cookie cookie = new Cookie("accessToken", token);
@@ -55,7 +55,7 @@ public class loginController {
             cookie.setPath("/");
             response.addCookie(cookie);
             model.addAttribute("message","sign in success");
-            return "loginSuccess";
+            return "redirect:/aiChatPage";
         }else{
             model.addAttribute("message","sign in fail");
             return "signUpPage";
@@ -65,5 +65,10 @@ public class loginController {
     @ResponseBody
     public String checkId(@RequestParam("id") String id){
         return loginService.checkId(id);
+    }
+
+    @RequestMapping("/aiChatPage")
+    public String aiChatPage() {
+        return "aiChatPage";
     }
 }

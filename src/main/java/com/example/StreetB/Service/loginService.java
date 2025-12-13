@@ -18,7 +18,7 @@ public class loginService {
             String token = jwtUtil.createToken(loginDTO.getId());
             return token;
         } else {
-            return "fail";
+            return null;
         }
     }
     public String signIn(loginDTO loginDTO){
@@ -26,7 +26,7 @@ public class loginService {
             String token = jwtUtil.createToken(loginDTO.getId());
             return token;
         }else{
-            return "fail";
+            return null;
         }
     }
     public String checkId(String id){

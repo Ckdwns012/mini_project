@@ -28,6 +28,8 @@ public class VectorStoreInMemory {
     /**
      * 사용자 쿼리와 가장 관련성이 높은 청크를 검색합니다.
      * 실제 벡터 검색이 아닌, 단순 키워드 유사도 점수를 매기는 방식으로 구현했습니다.
+     * 단순 벡터임베딩은 법률 데이터 청크에서 적합한 조항을 선택하지 못하고, 참조데이터가 많아지면 성능이 급격하게 떨어집니다.
+     * 향후, 청크에 키워드를 부여해서 키워드 + 임베딩의 하이브리드 검색 기능으로 발전이 필요합니다.
      */
     public List<chunkDTO> retrieveRelevantChunks(String userQuery, int topK) {
         if (store.isEmpty()) {
@@ -59,7 +61,7 @@ public class VectorStoreInMemory {
     }
 
     /**
-     * 아주 단순한 키워드 기반 유사도 계산 헬퍼 함수
+     * 단순한 키워드 기반 유사도 계산 헬퍼 함수
      */
     private double calculateKeywordSimilarity(String text, List<String> queryWords) {
         String lowerCaseText = text.toLowerCase();
