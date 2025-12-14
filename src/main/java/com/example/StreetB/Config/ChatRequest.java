@@ -17,7 +17,7 @@ public class ChatRequest {
     private List<messageDTO> messages;
 
     // 최대 생성 길이 제한
-    private Integer max_tokens = 512;
+    private Integer max_tokens = 1024;
 
     // 출력 다양성 조절 (담백한 응답을 위해 0.2로 설정)
     private Double temperature = 0.2;
@@ -29,7 +29,7 @@ public class ChatRequest {
     private Boolean stream = false;
 
     // 이전에 사용된 단어에 대한 페널티 (반복 억제를 위해 1.2로 설정)
-    private Double frequency_penalty = 1.2;
+    private Double frequency_penalty = 1.5;
 
     // 새로운 주제/단어 도입에 대한 페널티 (보통 0.0 유지)
     // private Double presence_penalty = 0.0;

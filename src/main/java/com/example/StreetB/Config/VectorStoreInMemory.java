@@ -10,65 +10,93 @@ import java.util.Arrays;
 
 @Component
 public class VectorStoreInMemory {
-    // 실제로는 임베딩 벡터를 저장해야 하지만, 여기서는 단순화를 위해 텍스트 청크만 저장
+    /* =========================
+       법령 Chunk 저장소 (In-Memory)
+     ========================= */
     private final List<chunkDTO> store = new ArrayList<>();
 
+    /* =========================
+       기본 관리 메서드
+     ========================= */
     public void addChunk(chunkDTO chunk) {
         store.add(chunk);
     }
-
     public int getSize() {
         return store.size();
     }
-
-    public void clearChunk(){
-        this.store.clear();
+    public void clearChunk() {
+        store.clear();
     }
 
-    /**
-     * 사용자 쿼리와 가장 관련성이 높은 청크를 검색합니다.
-     * 실제 벡터 검색이 아닌, 단순 키워드 유사도 점수를 매기는 방식으로 구현했습니다.
-     * 단순 벡터임베딩은 법률 데이터 청크에서 적합한 조항을 선택하지 못하고, 참조데이터가 많아지면 성능이 급격하게 떨어집니다.
-     * 향후, 청크에 키워드를 부여해서 키워드 + 임베딩의 하이브리드 검색 기능으로 발전이 필요합니다.
-     */
+    /* =========================
+       검색 로직(사용자 질문과 가장 관련성이 높은 법령 청크를 반환)
+     ========================= */
     public List<chunkDTO> retrieveRelevantChunks(String userQuery, int topK) {
         if (store.isEmpty()) {
             return List.of();
         }
-
-        // 쿼리를 단어로 분할 (아주 단순한 토큰화)
-        List<String> queryWords = Arrays.asList(userQuery.toLowerCase().split("\\s+"));
-
-        // 각 청크와 쿼리 간의 유사도 점수 계산 (단어 출현 빈도 기반)
+        // 1.쿼리 단순 토큰화
+        List<String> queryWords =
+                Arrays.asList(userQuery.toLowerCase().split("\\s+"));
+        // 2. 각 청크별 유사도 계산
         for (chunkDTO chunk : store) {
-            double score = calculateKeywordSimilarity(chunk.getContent(), queryWords);
+            double score = calculateWeightedSimilarity(chunk, queryWords);
             chunk.setSimilarityScore(score);
         }
-
-        // 점수 기준으로 내림차순 정렬하고 상위 K개 선택
+        // 3. 점수 기준 정렬
         List<chunkDTO> sortedChunks = new ArrayList<>(store);
-        sortedChunks.sort(Comparator.comparingDouble(chunkDTO::getSimilarityScore).reversed());
-
-        // 점수가 0보다 큰 청크만 반환
+        sortedChunks.sort(
+                Comparator.comparingDouble(chunkDTO::getSimilarityScore)
+                        .reversed()
+        );
+        // 4. 상위 K개 + 점수 0 이상만 반환
         List<chunkDTO> results = new ArrayList<>();
         for (int i = 0; i < Math.min(topK, sortedChunks.size()); i++) {
             if (sortedChunks.get(i).getSimilarityScore() > 0) {
                 results.add(sortedChunks.get(i));
             }
         }
-
         return results;
     }
 
+
+    /* =========================
+       유사도 계산 로직(법률 검색용 가중치 기반 유사도 계산)
+     ========================= */
     /**
-     * 단순한 키워드 기반 유사도 계산 헬퍼 함수
+     * 가중치 기준:
+     *  - articleTitle : 7
+     *  - chapterTitle : 3
+     *  - text         : 1
      */
-    private double calculateKeywordSimilarity(String text, List<String> queryWords) {
-        String lowerCaseText = text.toLowerCase();
-        long matchCount = queryWords.stream()
-                .filter(lowerCaseText::contains)
+    private double calculateWeightedSimilarity(
+            chunkDTO chunk,
+            List<String> queryWords
+    ) {
+        double score = 0.0;
+        // 본문 (가중치 1)
+        score += countMatches(chunk.getText(), queryWords) * 1;
+        // 장 제목 (가중치 3)
+        if (chunk.getChapterTitle() != null) {
+            score += countMatches(chunk.getChapterTitle(), queryWords) * 3;
+        }
+        // 조 제목 (가중치 7)
+        if (chunk.getArticleTitle() != null) {
+            score += countMatches(chunk.getArticleTitle(), queryWords) * 7;
+        }
+        return score;
+    }
+
+    /**
+     * 텍스트 내 키워드 매칭 개수 계산
+     */
+    private long countMatches(String text, List<String> queryWords) {
+        if (text == null || text.isEmpty()) {
+            return 0;
+        }
+        String lower = text.toLowerCase();
+        return queryWords.stream()
+                .filter(lower::contains)
                 .count();
-        // 일치하는 단어 수에 비례하여 점수 반환
-        return (double) matchCount;
     }
 }
